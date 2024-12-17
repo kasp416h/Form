@@ -1,0 +1,11 @@
+.form-error {
+  color: #d9534f;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.form-input.error,
+.form-select.error,
+.form-textarea.error {
+  border-color: #d9534f;
+}
