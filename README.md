@@ -1,6 +1,6 @@
-# Form Plugin
+# Form Lib
 
-This is a form plugin built with Next.js using the Shadcn UI form setup. It simplifies the creation and management of forms with various input types and advanced features.
+This is a form lib built with Next.js using the Shadcn UI form setup. It simplifies the creation and management of forms with various input types and advanced features.
 
 ## Features
 
@@ -12,7 +12,7 @@ This is a form plugin built with Next.js using the Shadcn UI form setup. It simp
 
 ## Usage
 
-To use this plugin, import the necessary components and set up your form as shown in the example below:
+To use this lib, import the necessary components and set up your form as shown in the example below:
 
 ```tsx
 import { Form, Control, Button } from "@/path/to/form";
