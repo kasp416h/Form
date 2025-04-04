@@ -1,18 +1,18 @@
-import React, { memo } from 'react';
+import React, { memo } from "react";
 
-import { FormControl } from '@/components/ui/form';
+import { FormControl } from "@/components/ui/form";
 import {
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
   Select as ShadSelect,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 
 type Option = {
   value: string;
   label: string;
-  itemClassName?: React.HTMLAttributes<HTMLDivElement>['className'];
+  itemClassName?: React.HTMLAttributes<HTMLDivElement>["className"];
 };
 
 interface SelectProperties {
@@ -46,7 +46,7 @@ function Select({
           <SelectItem
             key={option.value}
             value={option.value}
-            className={option.itemClassName || ''}
+            className={option.itemClassName || ""}
           >
             {option.label}
           </SelectItem>

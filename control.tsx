@@ -43,6 +43,7 @@ export const Control: React.FC<ConditionalControlProperties> = (properties) => {
     placeholder = "",
     onFormBlur,
     defaultValue,
+    defaultChecked,
     wrapperClassName,
     itemClassName,
     labelClassName,
@@ -73,23 +74,18 @@ export const Control: React.FC<ConditionalControlProperties> = (properties) => {
 
   // Adjust default value based on input type
   const adjustedDefaultValue = useMemo(() => {
-    switch (type) {
-      case "switch":
-      case "checkbox": {
-        return defaultValue ?? false;
-      }
-      case "select": {
-        return (
-          defaultValue ||
-          (properties as SelectControlProperties | MultiSelectControlProperties)
-            .options[0]?.value
-        );
-      }
-      default: {
-        return defaultValue || "";
-      }
+    if (type === "checkbox" || type === "switch" || type === "radio") {
+      return defaultChecked ?? defaultValue ?? false;
     }
-  }, [type, defaultValue, properties]);
+    if (type === "select") {
+      return (
+        defaultValue ||
+        (properties as SelectControlProperties | MultiSelectControlProperties)
+          .options[0]?.value
+      );
+    }
+    return defaultValue || "";
+  }, [type, defaultValue, defaultChecked, properties]);
 
   // Select a component based on the type
   const renderInput = useCallback(
@@ -229,7 +225,9 @@ export const Control: React.FC<ConditionalControlProperties> = (properties) => {
       name={fieldName}
       defaultValue={adjustedDefaultValue}
       render={({ field }) => (
-        <FormItem className={wrapperClassName}>
+        <FormItem
+          className={cn("flex flex-col space-y-0 gap-y-2", wrapperClassName)}
+        >
           {label && type !== "checkbox" && type !== "switch" && (
             <FormLabel
               htmlFor={fieldName}

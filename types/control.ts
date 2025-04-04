@@ -21,10 +21,10 @@ export interface CommonControlProperties
   required?: boolean;
   placeholder?: string;
   onFormBlur?: FormHelpers | ((data: string) => string);
-  defaultValue?: string | number | readonly string[];
   wrapperClassName?: React.HTMLAttributes<HTMLDivElement>["className"];
   itemClassName?: React.HTMLAttributes<HTMLDivElement>["className"];
   labelClassName?: React.HTMLAttributes<HTMLLabelElement>["className"];
+  disabled?: boolean;
 }
 
 export interface SelectControlProperties extends CommonControlProperties {

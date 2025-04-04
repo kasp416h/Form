@@ -6,7 +6,7 @@ export const passwordSchema = z
   .string()
   .min(8, { message: "Passwords must be at least eight characters" })
   .max(100, { message: "Password must not exceed hundred characters" })
-  .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[\dA-Za-z]{8,}$/, {
+  .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/, {
     message:
       "Passwords must contain at least one uppercase letter, one lowercase letter, and one number",
   });
@@ -37,25 +37,22 @@ export const telSchema = z
 
 export const objectIdSchema = z.string().regex(/^[a-f0-9]{32}$/, "Invalid ID");
 
-export const typeSchemas = {
-  email: emailSchema,
-  password: passwordSchema,
-  username: usernameSchema,
-  calender: z.date(),
-  url: z.string().url("Invalid URL"),
-  text: z.string(),
-  number: z.coerce.number(),
-  checkbox: z.boolean(),
-  select: z.string(),
-  selectWithLogo: z.string(),
-  radio: z.string(),
-  textarea: z.string(),
-  date: z.date(),
-  time: z.string(),
-  datetime: z.date(),
-  file: z.string(),
-  image: z.string(),
-  video: z.string(),
-  audio: z.string(),
-  tel: telSchema,
-};
+export const vatNoSchema = z
+  .string()
+  .min(1, "Required")
+  .refine((val) => /^[A-Za-z]+/.test(val), {
+    message: "Missing country code",
+  })
+  .refine((val) => /[0-9]+$/.test(val), {
+    message: "Missing VAT number",
+  });
+
+export const blobSchema = (required = true) =>
+  z
+    .any()
+    .refine(
+      (val) =>
+        (required && val instanceof File && val.size > 0) ||
+        (!required && (!val || (val instanceof File && val.size > 0))),
+      "Invalid image file"
+    );

@@ -13,10 +13,12 @@ import { toast } from "sonner";
 
 import { processAndEncryptFields } from "./crypt/client";
 import "./styles.css";
+
 interface FormContextType {
   isSubmitting: boolean;
   currentStep: number;
   setCurrentStep: React.Dispatch<React.SetStateAction<number>>;
+  triggerSubmit: () => Promise<void>;
 }
 
 export const FormContext = createContext<FormContextType | undefined>(
@@ -35,9 +37,11 @@ interface FormProperties {
   style?: React.CSSProperties;
   className?: string;
   multiStep?: boolean;
+  defaultStep?: number;
   steps?: React.JSX.Element[];
   stepActions?: ((data: any) => Promise<ActionResponse>)[];
   encryptedFields?: string[];
+  autoCloseDialog?: string;
 }
 
 export const Form: React.FC<FormProperties> = ({
@@ -52,15 +56,15 @@ export const Form: React.FC<FormProperties> = ({
   style,
   className,
   multiStep = false,
+  defaultStep = 0,
   steps,
   stepActions = [],
   encryptedFields = [],
+  autoCloseDialog,
 }) => {
   const router = useRouter();
 
-  const [csrfToken, setCsrfToken] = useState<string>("");
-  const [currentStep, setCurrentStep] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(multiStep);
+  const [currentStep, setCurrentStep] = useState<number>(defaultStep);
 
   const methods = useForm({
     mode: "onSubmit",
@@ -68,28 +72,6 @@ export const Form: React.FC<FormProperties> = ({
   });
 
   const totalSteps = steps?.length || 1;
-
-  useEffect(() => {
-    const fetchCsrfToken = async () => {
-      const token = await getCsrfToken();
-      setCsrfToken(token || "");
-    };
-    fetchCsrfToken();
-  }, []);
-
-  // Retrieve and set the saved step from sessionStorage on mount
-  useEffect(() => {
-    const savedStep = sessionStorage.getItem("currentStep");
-    if (savedStep !== null && Number(savedStep) < totalSteps) {
-      setCurrentStep(Number(savedStep));
-    }
-    setLoading(false);
-  }, [totalSteps]);
-
-  // Store current step in sessionStorage when it changes
-  useEffect(() => {
-    sessionStorage.setItem("currentStep", String(currentStep));
-  }, [currentStep]);
 
   // Reset form when item updates
   useEffect(() => {
@@ -109,6 +91,8 @@ export const Form: React.FC<FormProperties> = ({
         processedData = await processAndEncryptFields(data, encryptedFields);
       }
 
+      const csrfToken = await getCsrfToken();
+
       const response: ActionResponse = await submitAction({
         ...item,
         ...processedData,
@@ -125,7 +109,24 @@ export const Form: React.FC<FormProperties> = ({
           }
         }
 
-        return toast.error(response.error);
+        const errorMessage =
+          typeof response.error === "string"
+            ? response.error
+            : "Ups noget gik galt!";
+
+        console.log(response);
+
+        return toast.error(errorMessage);
+      }
+
+      if (autoCloseDialog) {
+        const closeButton = document.getElementById(
+          autoCloseDialog
+        ) as HTMLElement;
+
+        if (closeButton) {
+          closeButton.click();
+        }
       }
 
       if (response.success) {
@@ -137,8 +138,6 @@ export const Form: React.FC<FormProperties> = ({
       if (multiStep) {
         if (currentStep < totalSteps - 1) {
           setCurrentStep((previous) => previous + 1);
-        } else {
-          sessionStorage.removeItem("currentStep");
         }
       }
       if (redirectUrl) {
@@ -151,9 +150,9 @@ export const Form: React.FC<FormProperties> = ({
     }
   };
 
-  if (loading) {
-    return;
-  }
+  const triggerSubmit = async () => {
+    await methods.handleSubmit(handleFormSubmit)();
+  };
 
   return (
     <FormContext.Provider
@@ -161,6 +160,7 @@ export const Form: React.FC<FormProperties> = ({
         isSubmitting: methods.formState.isSubmitting,
         currentStep,
         setCurrentStep,
+        triggerSubmit,
       }}
     >
       <ShadcnForm {...methods}>

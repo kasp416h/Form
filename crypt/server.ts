@@ -1,16 +1,13 @@
+import crypto from "node:crypto";
 import "server-only";
 
-import crypto from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
-
-function loadPrivateKey() {
-  const privateKeyPath = path.join(process.cwd(), "private_key.pem");
-  return fs.readFileSync(privateKeyPath, "utf8");
-}
-
 export function decryptData(encryptedData: string) {
-  const privateKey = loadPrivateKey();
+  const privateKey = process.env.PRIVATE_KEY_PEM;
+
+  if (!privateKey) {
+    throw new Error("Private key is not defined");
+  }
+
   const buffer = Buffer.from(encryptedData, "base64");
 
   const decrypted = crypto.privateDecrypt(

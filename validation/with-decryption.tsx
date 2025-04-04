@@ -1,18 +1,19 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import "server-only";
 
-import { validateCsrfToken, shapeError } from "./utils";
+import { validateCsrfToken, shapeError, Handler } from "./utils";
 import { ZodSchema, z } from "zod";
 import { decryptData } from "../crypt/server";
 
-type Handler<T> = (validatedData: T) => Promise<ActionResponse>;
-
-export function withDecryptionAndValidation<T extends ZodSchema>(
-  schema: T,
-  handler: Handler<z.infer<T>> & { encryptedFields: string }
-) {
-  return async (formData: Record<string, any>) => {
-    const { csrfToken, ...data } = formData;
+export function withDecryptionAndValidation<
+  T extends ZodSchema,
+  SchemaResult = z.infer<ZodSchema> & {
+    encryptedFields: string;
+  }
+>(schema: T, handler: Handler<SchemaResult>) {
+  return async (
+    formData: SchemaResult & { csrfToken: string; encryptedFields: string }
+  ) => {
+    const { csrfToken, ...rawData } = formData;
 
     try {
       validateCsrfToken(csrfToken);
@@ -23,13 +24,14 @@ export function withDecryptionAndValidation<T extends ZodSchema>(
       } as ActionResponse;
     }
 
-    let decryptedData: Record<string, any> = { ...data };
+    let mergedData: Record<string, unknown> = { ...rawData };
 
-    if (data["encryptedFields"]) {
+    if (typeof mergedData.encryptedFields === "string") {
       try {
-        const decryptedFields = decryptData(data["encryptedFields"]);
-        decryptedData = { ...decryptedData, ...decryptedFields };
-        delete decryptedData["encryptedFields"];
+        const decryptedFields = decryptData(
+          mergedData.encryptedFields
+        ) as SchemaResult;
+        mergedData = { ...mergedData, ...decryptedFields };
       } catch {
         return {
           status: 400,
@@ -38,7 +40,7 @@ export function withDecryptionAndValidation<T extends ZodSchema>(
       }
     }
 
-    const validation = schema.safeParse(decryptedData);
+    const validation = schema.safeParse(mergedData);
 
     if (!validation.success) {
       return {
@@ -48,8 +50,13 @@ export function withDecryptionAndValidation<T extends ZodSchema>(
       } as ActionResponse;
     }
 
+    const finalData = {
+      ...mergedData,
+      ...validation.data,
+    };
+
     try {
-      return await handler(data as z.infer<T>);
+      return await handler(finalData as SchemaResult);
     } catch (error) {
       const shapedError = shapeError(error);
 

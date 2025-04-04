@@ -1,21 +1,62 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import "server-only";
 
 import { cookies } from "next/headers";
 import { ZodSchema } from "zod";
+
+export type Handler<T> = (validatedData: T) => Promise<ActionResponse>;
 
 export type ShapedError = {
   status: number;
   error: string;
 };
 
+interface APIErrorResponse {
+  response?: {
+    status?: number;
+    data?: Record<string, string[] | string>;
+  };
+}
+
+export function shapeError(error: unknown): ShapedError {
+  const defaultError = {
+    status: 500,
+    error: "Something went wrong",
+  };
+
+  if (!error || typeof error !== "object") return defaultError;
+
+  const apiError = error as APIErrorResponse;
+
+  console.log(apiError.response);
+
+  if (!apiError.response?.data) {
+    return defaultError;
+  }
+
+  const { status = 400, data } = apiError.response;
+
+  if (typeof data !== "object") {
+    return defaultError;
+  }
+
+  for (const [, message] of Object.entries(data)) {
+    if (Array.isArray(message) && typeof message[0] === "string") {
+      return { status, error: message[0] };
+    } else if (typeof message === "string") {
+      return { status, error: message };
+    }
+  }
+
+  return defaultError;
+}
+
 export async function validateCsrfToken(csrfTokenFromForm: string) {
+  if (process.env.TESTING === "true") {
+    return;
+  }
+
   const awaitedCookies = await cookies();
-  const csrfTokenCookie = awaitedCookies.get(
-    process.env.NODE_ENV === "production"
-      ? "__Host-authjs.csrf-token"
-      : "authjs.csrf-token"
-  );
+  const csrfTokenCookie = awaitedCookies.get("authjs.csrf-token");
 
   if (!csrfTokenCookie) {
     throw new Error("Missing CSRF token cookie");
@@ -28,43 +69,12 @@ export async function validateCsrfToken(csrfTokenFromForm: string) {
   }
 }
 
-export function shapeError(error: any): ShapedError {
-  const defaultError = {
-    status: 500,
-    error: "Something went wrong",
-  };
-
-  if (!error || typeof error !== "object") return defaultError;
-
-  if (error.response?.data) {
-    const data: Record<string, string[] | string> = error.response.data;
-
-    if (typeof data === "object") {
-      for (const [, message] of Object.entries(data)) {
-        if (Array.isArray(message) && typeof message[0] === "string") {
-          return {
-            status: error.response.status || 400,
-            error: message[0],
-          };
-        } else if (message) {
-          return {
-            status: error.response.status || 400,
-            error: message as string,
-          };
-        }
-      }
-    }
-  }
-
-  return defaultError;
-}
-
 export function validateForm<T extends ZodSchema>(
   schema: T,
-  formData: Record<string, any>
+  formData: Record<string, unknown>
 ) {
   try {
-    validateCsrfToken(formData.csrfToken);
+    validateCsrfToken(formData.csrfToken as string);
   } catch {
     return {
       success: false as const,

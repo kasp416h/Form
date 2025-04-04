@@ -1,16 +1,13 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import "server-only";
 
-import { validateForm, shapeError } from "./utils";
+import { validateForm, shapeError, Handler } from "./utils";
 import { ZodSchema, z } from "zod";
 
-type Handler<T> = (validatedData: T) => Promise<ActionResponse>;
-
-export function withValidation<T extends ZodSchema>(
-  schema: T,
-  handler: Handler<z.infer<T>>
-) {
-  return async (formData: Record<string, any>) => {
+export function withValidation<
+  T extends ZodSchema,
+  SchemaResult = z.infer<ZodSchema>
+>(schema: T, handler: Handler<SchemaResult>) {
+  return async (formData: SchemaResult & { csrfToken: string }) => {
     const validationResult = validateForm(schema, formData);
 
     if (!validationResult.success) {
@@ -22,7 +19,7 @@ export function withValidation<T extends ZodSchema>(
     }
 
     try {
-      return await handler(validationResult.data);
+      return await handler(validationResult.data as SchemaResult);
     } catch (error) {
       const shapedError = shapeError(error);
 
